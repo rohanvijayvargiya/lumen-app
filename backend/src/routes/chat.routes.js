@@ -1,0 +1,75 @@
+const express = require("express");
+const { readAll, writeAll } = require("../db");
+const { streamClaude } = require("../utils/anthropicStream");
+
+const router = express.Router();
+
+function truncateTitle(text) {
+  const clean = text.trim().replace(/\s+/g, " ");
+  return clean.length > 48 ? clean.slice(0, 48) + "…" : clean;
+}
+
+// POST /api/chat/stream  { conversationId, content }
+// Streams the assistant's reply back as it's generated, using Server-Sent
+// Events. Each chunk looks like: data: {"type":"delta","text":"..."}\n\n
+router.post("/stream", async (req, res) => {
+  const { conversationId, content } = req.body || {};
+  if (!conversationId || !content || !content.trim()) {
+    return res.status(400).json({ error: "conversationId and content are required" });
+  }
+
+  const db = readAll();
+  const convo = db.conversations.find((c) => c.id === conversationId);
+  if (!convo) return res.status(404).json({ error: "Conversation not found" });
+
+  const userMessage = { id: `m${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() };
+  convo.messages.push(userMessage);
+  if (convo.title === "New chat") convo.title = truncateTitle(content);
+  convo.updatedAt = new Date().toISOString();
+  writeAll(db);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const apiMessages = convo.messages.map((m) => ({ role: m.role, content: m.content }));
+  let assistantText = "";
+
+  try {
+    for await (const evt of streamClaude(apiMessages)) {
+      if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
+        assistantText += evt.delta.text;
+        res.write(`data: ${JSON.stringify({ type: "delta", text: evt.delta.text })}\n\n`);
+      } else if (evt.type === "error") {
+        throw new Error(evt.error?.message || "Streaming error from Anthropic API");
+      } else if (evt.type === "message_stop") {
+        break;
+      }
+    }
+
+    const assistantMessage = {
+      id: `m${Date.now() + 1}`,
+      role: "assistant",
+      content: assistantText,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Re-read fresh in case anything else changed the file while we streamed.
+    const freshDb = readAll();
+    const freshConvo = freshDb.conversations.find((c) => c.id === conversationId);
+    if (freshConvo) {
+      freshConvo.messages.push(assistantMessage);
+      freshConvo.updatedAt = new Date().toISOString();
+      writeAll(freshDb);
+    }
+
+    res.write(`data: ${JSON.stringify({ type: "done", message: assistantMessage, title: convo.title })}\n\n`);
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
+module.exports = router;

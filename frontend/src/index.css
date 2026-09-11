@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d8d5cc;
+  border-radius: 8px;
+}
+
+.md-pre {
+  background: #171923;
+  color: #f2f1ec;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.md-pre code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+.md-code {
+  background: #F1EDE3;
+  color: #B65C3E;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 0.9em;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  background: #D97757;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 1s step-start infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
