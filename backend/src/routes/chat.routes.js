@@ -19,7 +19,7 @@ router.post("/stream", async (req, res) => {
   }
 
   const db = readAll();
-  const convo = db.conversations.find((c) => c.id === conversationId);
+  const convo = db.conversations.find((c) => c.id === conversationId && c.userId === req.userId);
   if (!convo) return res.status(404).json({ error: "Conversation not found" });
 
   const userMessage = { id: `m${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() };

@@ -4,42 +4,76 @@ import { MobileHeader } from "./components/MobileHeader";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
 import { EmptyState } from "./components/EmptyState";
+import { AuthPage } from "./pages/AuthPage";
 import { api } from "./lib/api";
+import { getToken, clearToken } from "./lib/auth";
 
 export default function App() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState(null);
+
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [errorBanner, setErrorBanner] = useState("");
   const bottomRef = useRef(null);
   const stopRequested = useRef(false);
 
+  // On first load, see if a saved login token is still valid.
   useEffect(() => {
+    let cancelled = false;
+    async function checkSession() {
+      if (!getToken()) {
+        setAuthChecked(true);
+        return;
+      }
+      try {
+        const me = await api.me();
+        if (!cancelled) setUser(me);
+      } catch {
+        clearToken();
+      } finally {
+        if (!cancelled) setAuthChecked(true);
+      }
+    }
+    checkSession();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Once logged in, load this user's conversations.
+  useEffect(() => {
+    if (!user) return;
     let cancelled = false;
     async function load() {
       try {
         const list = await api.getConversations();
-        if (cancelled) return;
-        setConversations(list);
+        if (!cancelled) setConversations(list);
       } catch (err) {
         if (!cancelled) setLoadError(err.message || "Couldn't reach the API server.");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  function handleLogout() {
+    api.logout();
+    setUser(null);
+    setConversations([]);
+    setActiveId(null);
+    setMessages([]);
+  }
 
   const selectConversation = useCallback(async (id) => {
     setActiveId(id);
@@ -125,6 +159,10 @@ export default function App() {
       onError: (message) => {
         setIsStreaming(false);
         setErrorBanner(message);
+        if (message && message.toLowerCase().includes("session expired")) {
+          handleLogout();
+          return;
+        }
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsg.id ? { ...m, content: fullText || "_Something went wrong generating a reply._" } : m
@@ -139,8 +177,12 @@ export default function App() {
     setIsStreaming(false);
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted text-sm">Loading Lumen…</div>;
+  if (!authChecked) {
+    return <div className="flex items-center justify-center min-h-screen text-muted text-sm">Loading…</div>;
+  }
+
+  if (!user) {
+    return <AuthPage onAuth={setUser} />;
   }
 
   if (loadError) {
@@ -166,6 +208,8 @@ export default function App() {
         onSelect={selectConversation}
         onNew={handleNewChat}
         onDelete={handleDeleteConversation}
+        user={user}
+        onLogout={handleLogout}
       />
 
       <div className="flex-1 flex flex-col min-h-screen">
@@ -175,6 +219,8 @@ export default function App() {
           onSelect={selectConversation}
           onNew={handleNewChat}
           onDelete={handleDeleteConversation}
+          user={user}
+          onLogout={handleLogout}
         />
 
         {errorBanner && (

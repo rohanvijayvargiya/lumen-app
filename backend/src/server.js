@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+const { requireAuth } = require("./middleware/auth");
+const authRoutes = require("./routes/auth.routes");
 const conversationsRoutes = require("./routes/conversations.routes");
 const chatRoutes = require("./routes/chat.routes");
 
@@ -16,8 +18,10 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", aiConfigured: Boolean(process.env.GROQ_API_KEY) });
 });
 
-app.use("/api/conversations", conversationsRoutes);
-app.use("/api/chat", chatRoutes);
+// Signup/login are public. Everything else requires a valid session.
+app.use("/api/auth", authRoutes);
+app.use("/api/conversations", requireAuth, conversationsRoutes);
+app.use("/api/chat", requireAuth, chatRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

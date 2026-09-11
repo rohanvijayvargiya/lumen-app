@@ -10,13 +10,18 @@ const DB_PATH = path.join(__dirname, "..", "data", "db.json");
 function ensureDB() {
   if (!fs.existsSync(DB_PATH)) {
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    fs.writeFileSync(DB_PATH, JSON.stringify({ conversations: [] }, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], conversations: [] }, null, 2));
   }
 }
 
 function readAll() {
   ensureDB();
-  return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+  const data = JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
+  // Backward-compatible: older db.json files (from before accounts existed)
+  // won't have a `users` array yet — default it in memory rather than crash.
+  if (!Array.isArray(data.users)) data.users = [];
+  if (!Array.isArray(data.conversations)) data.conversations = [];
+  return data;
 }
 
 function writeAll(data) {

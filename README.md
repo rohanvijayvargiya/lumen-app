@@ -1,37 +1,34 @@
 # Lumen — AI Chat App (Full-Stack)
 
 A real full-stack AI chatbot: a Node/Express backend that streams responses
-token-by-token (like ChatGPT/Claude.ai), and a React (Vite) frontend with
-multiple saved conversations in a sidebar.
+token-by-token, a React (Vite) frontend with multiple saved conversations,
+and now **real accounts** — everyone signs up with their own email/password
+and only ever sees their own chat history.
 
-Runs on **Groq's free API** (no credit card, generous free tier) serving
-open-source models like Llama 3.3 — so the whole thing costs $0 to run.
+Runs on **Groq's free API** (no credit card, generous free tier) — the
+whole thing costs $0 to run.
 
 ```
 lumen-chat/
-├── backend/     Express API — conversations + streaming chat endpoint
-└── frontend/    React (Vite + Tailwind) chat UI
+├── backend/     Express API — auth, conversations, streaming chat endpoint
+└── frontend/    React (Vite + Tailwind) chat UI + login/signup
 ```
 
 ## Features
 
-- **Streaming responses** — the assistant's reply appears word-by-word as
-  it's generated, not all at once.
-- **Multiple conversations** — a sidebar lists past chats; click to switch,
-  "+ New chat" to start one, trash icon to delete.
-- **Conversation memory** — each chat remembers everything said earlier in
-  it, and persists to disk so refreshing the page doesn't lose anything.
-- **Markdown rendering** — bold, inline code, fenced code blocks, and bullet
-  lines render properly in the assistant's replies.
-- **Auto-titling** — a conversation's title is set from your first message.
+- **Accounts** — sign up, log in; passwords are hashed (never stored in
+  plain text); sessions use signed tokens (JWT) that last 30 days.
+- **Private history** — every conversation belongs to exactly one account;
+  the API refuses to show or modify a conversation that isn't yours.
+- **Streaming responses** — replies appear word-by-word as they're generated.
+- **Multiple conversations** — a sidebar lists your past chats.
+- **Markdown + math rendering** — bold, code blocks, headings, and LaTeX
+  math (`\(x^2\)`, `\[ ... \]`) all render properly.
 
 ## Prerequisites
 
-- Node.js 18 or later
-- npm
-- A free Groq API key (**required** — there's no fallback mode; a chatbot
-  has nothing to "fall back" to). Get one at https://console.groq.com/keys
-  — sign up with email or Google, no credit card, no charges.
+- Node.js 18 or later, npm
+- A free Groq API key: https://console.groq.com/keys (no credit card)
 
 ## 1. Backend setup
 
@@ -45,7 +42,15 @@ Open `backend/.env` and set:
 
 ```
 GROQ_API_KEY=gsk_...
+JWT_SECRET=some-long-random-string
 ```
+
+Generate a good `JWT_SECRET` with:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+(You can technically skip this — the app auto-generates one — but then
+everyone gets logged out every time the server restarts.)
 
 Start it:
 
@@ -53,18 +58,9 @@ Start it:
 npm run dev
 ```
 
-Runs at `http://localhost:4000`. Data is stored in `backend/data/db.json`
-(created automatically). Check it's alive:
-
-```bash
-curl http://localhost:4000/api/health
-```
-
-You should see `{"status":"ok","aiConfigured":true}`.
+Runs at `http://localhost:4000`. Data is stored in `backend/data/db.json`.
 
 ## 2. Frontend setup
-
-In a second terminal:
 
 ```bash
 cd frontend
@@ -73,55 +69,46 @@ cp .env.example .env
 npm run dev
 ```
 
-Open the URL Vite prints (typically `http://localhost:5173`).
+Open the URL Vite prints (typically `http://localhost:5173`). You'll land
+on a login/signup screen — click "Sign up" to create your first account.
 
 ## API reference
 
-| Method | Path                     | Description                                  |
-|--------|--------------------------|-----------------------------------------------|
-| GET    | /api/conversations        | List conversations (id, title, updatedAt)    |
-| POST   | /api/conversations        | Create a new empty conversation              |
-| GET    | /api/conversations/:id     | Get a conversation with its full messages    |
-| PATCH  | /api/conversations/:id     | Rename a conversation                        |
-| DELETE | /api/conversations/:id     | Delete a conversation                        |
-| POST   | /api/chat/stream           | Send a message; streams the reply via SSE    |
+| Method | Path                     | Auth? | Description                              |
+|--------|--------------------------|-------|--------------------------------------------|
+| POST   | /api/auth/signup          | No    | Create an account                          |
+| POST   | /api/auth/login           | No    | Log in, get a session token                |
+| GET    | /api/auth/me              | Yes   | Get the current logged-in user             |
+| GET    | /api/conversations        | Yes   | List YOUR conversations                    |
+| POST   | /api/conversations        | Yes   | Create a new empty conversation            |
+| GET    | /api/conversations/:id     | Yes   | Get one of YOUR conversations              |
+| PATCH  | /api/conversations/:id     | Yes   | Rename one of YOUR conversations           |
+| DELETE | /api/conversations/:id     | Yes   | Delete one of YOUR conversations           |
+| POST   | /api/chat/stream           | Yes   | Send a message in YOUR conversation        |
 
-## Deploying (same pattern as the ATS project)
+"Auth? Yes" routes require an `Authorization: Bearer <token>` header — the
+frontend handles this automatically once you're logged in.
 
-1. Push this folder to a GitHub repo.
-2. **Backend → Render**: New Web Service → connect the repo → Root Directory
-   `backend` → Build Command `npm install` → Start Command `npm start` →
-   add environment variables `GROQ_API_KEY` and `CORS_ORIGIN` (set the
-   latter to your Vercel URL once you have it).
-3. **Frontend → Vercel**: Add New Project → connect the repo → Root
-   Directory `frontend` → add environment variable `VITE_API_URL` set to
-   your Render URL + `/api` (e.g. `https://lumen-backend.onrender.com/api`)
-   → Deploy.
-4. Go back to Render and update `CORS_ORIGIN` to your real Vercel URL, save
-   (auto-redeploys).
-5. Open your Vercel link and test: start a new chat, send a message, refresh
-   the page to confirm it's still there.
+## Deploying (same pattern as before)
+
+1. Push this folder to your GitHub repo (overwrite the existing files).
+2. **Backend → Render**: same service as before → Environment tab → add
+   `JWT_SECRET` alongside your existing `GROQ_API_KEY` and `CORS_ORIGIN` →
+   Manual Deploy → "Deploy latest commit".
+3. **Frontend → Vercel**: same project as before → Deployments →
+   Redeploy (no new env vars needed on this side).
+4. Open your live link — you should now see a login screen instead of
+   jumping straight into a shared chat.
 
 ## Notes on going further
 
-- **Database**: currently a JSON file (`backend/src/db.js`) for
-  dependency-free setup. Swap `readAll`/`writeAll` for Postgres/MongoDB for
-  production use — no other file needs to change.
-- **Auth**: there's no login system, so anyone with the URL can use (and see)
-  all conversations. Add authentication before sharing this beyond yourself.
-- **Model**: set in `backend/src/utils/groqStream.js` (`llama-3.3-70b-versatile`
-  by default). Check https://console.groq.com/docs/models for the full list
-  if you want to try a different one (faster/smaller, or a newer release).
-- **Free tier limits**: Groq's free tier allows 30 requests/minute and
-  14,400/day — more than enough for personal use, but if you ever hit a rate
-  limit error, that's why.
-- **Switching back to Claude later**: if you want Claude's actual model
-  quality instead of an open-source one, add credits to
-  console.anthropic.com and swap `groqStream.js` back to calling
-  `api.anthropic.com/v1/messages` (the original version used that; the
-  request/response shapes differ slightly, so it's a small rewrite, not a
-  one-line change).
-- **Stop button**: currently stops updating the UI locally but doesn't
-  cancel the underlying request — good enough for a first version; a true
-  cancel would use an `AbortController` passed through to the backend's
-  fetch call.
+- **Database**: still a JSON file (`backend/src/db.js`) — fine for
+  personal/demo use, but a real database is worth it once more than a
+  couple of people use this, since concurrent writes to one file don't
+  scale well.
+- **Password reset**: there's no "forgot password" flow yet — if someone
+  forgets theirs, the only fix right now is deleting their row from
+  `db.json` and signing up again.
+- **Email verification**: signup doesn't verify the email address is real
+  — fine for a personal project, but add it before treating this as a
+  public product.

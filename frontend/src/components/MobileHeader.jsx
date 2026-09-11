@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Menu, Plus, X, MessageSquare, Trash2 } from "lucide-react";
+import { Menu, Plus, X, MessageSquare, Trash2, LogOut } from "lucide-react";
 
-export function MobileHeader({ conversations, activeId, onSelect, onNew, onDelete }) {
+export function MobileHeader({ conversations, activeId, onSelect, onNew, onDelete, user, onLogout }) {
   const [open, setOpen] = useState(false);
   const active = conversations.find((c) => c.id === activeId);
 
@@ -49,6 +49,14 @@ export function MobileHeader({ conversations, activeId, onSelect, onNew, onDelet
               </div>
             ))}
           </div>
+          {user && (
+            <div className="p-3 border-t border-[#2B2F3B] flex items-center gap-2">
+              <div className="text-sm text-white flex-1 truncate">{user.name || user.email}</div>
+              <button onClick={onLogout} className="flex items-center gap-1.5 text-xs text-[#8A8F9C]">
+                <LogOut size={14} /> Log out
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

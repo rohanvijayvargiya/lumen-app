@@ -1,7 +1,7 @@
 import React from "react";
-import { Plus, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut } from "lucide-react";
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete }) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, user, onLogout }) {
   return (
     <div className="hidden md:flex flex-col w-72 shrink-0 h-screen sticky top-0 bg-ink text-white">
       <div className="p-4">
@@ -53,6 +53,21 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete }) 
           );
         })}
       </div>
+
+      {user && (
+        <div className="p-3 border-t border-[#2B2F3B] flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 bg-[#2A3253] text-white">
+            {(user.name || user.email || "?").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium truncate text-white">{user.name || user.email}</div>
+            <div className="text-[11px] truncate text-[#8A8F9C]">{user.email}</div>
+          </div>
+          <button onClick={onLogout} title="Log out" className="p-1.5 rounded-md hover:bg-black/20 shrink-0">
+            <LogOut size={15} color="#8A8F9C" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
