@@ -24,6 +24,9 @@ export function renderMarkdown(raw) {
   });
 
   text = escapeHtml(text);
+  text = text.replace(/^### (.+)$/gm, '<h3 class="md-h">$1</h3>');
+  text = text.replace(/^## (.+)$/gm, '<h2 class="md-h">$1</h2>');
+  text = text.replace(/^# (.+)$/gm, '<h1 class="md-h">$1</h1>');
   text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
   text = text.replace(/^- (.+)$/gm, "• $1");
