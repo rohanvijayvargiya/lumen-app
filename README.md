@@ -24,6 +24,9 @@ lumen-chat/
 - **Multiple conversations** — a sidebar lists your past chats.
 - **Markdown + math rendering** — bold, code blocks, headings, and LaTeX
   math (`\(x^2\)`, `\[ ... \]`) all render properly.
+- **Free image generation** — start a message with `/image` followed by a
+  description (e.g. `/image a fox reading under starlight`) to generate a
+  real picture, powered by Pollinations.ai's free, no-API-key image API.
 
 ## Prerequisites
 
@@ -85,6 +88,7 @@ on a login/signup screen — click "Sign up" to create your first account.
 | PATCH  | /api/conversations/:id     | Yes   | Rename one of YOUR conversations           |
 | DELETE | /api/conversations/:id     | Yes   | Delete one of YOUR conversations           |
 | POST   | /api/chat/stream           | Yes   | Send a message in YOUR conversation        |
+| POST   | /api/chat/image             | Yes   | Generate an image in YOUR conversation     |
 
 "Auth? Yes" routes require an `Authorization: Bearer <token>` header — the
 frontend handles this automatically once you're logged in.
@@ -112,3 +116,11 @@ frontend handles this automatically once you're logged in.
 - **Email verification**: signup doesn't verify the email address is real
   — fine for a personal project, but add it before treating this as a
   public product.
+- **Image generation**: uses Pollinations.ai's free public endpoint, which
+  has no uptime guarantee and can occasionally be slow or briefly down —
+  that's the tradeoff for it being free and keyless. If it stops working,
+  check https://pollinations.ai for status, or swap in a paid provider
+  (Stability AI, OpenAI's image API, etc.) in `backend/src/routes/chat.routes.js`.
+- **Video generation**: not included — there's currently no free,
+  reliable video-generation API to plug in the way Pollinations covers
+  images. All working options (Runway, Pika, Google Veo) are paid.

@@ -109,9 +109,63 @@ export default function App() {
     }
   }
 
+  async function sendImageRequest(prompt) {
+    let conversationId = activeId;
+    if (!conversationId) {
+      try {
+        const convo = await api.createConversation();
+        setConversations((prev) => [{ id: convo.id, title: convo.title, updatedAt: convo.updatedAt }, ...prev]);
+        conversationId = convo.id;
+        setActiveId(convo.id);
+      } catch (err) {
+        setErrorBanner(err.message);
+        return;
+      }
+    }
+
+    const localUserId = `local-${Date.now()}`;
+    const localAssistantId = `local-${Date.now() + 1}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: localUserId, role: "user", contentType: "text", content: prompt },
+      { id: localAssistantId, role: "assistant", contentType: "image", content: "" },
+    ]);
+    setInput("");
+    setErrorBanner("");
+
+    try {
+      const data = await api.generateImage(conversationId, prompt);
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id === localUserId) return { ...m, id: data.userMessage.id };
+          if (m.id === localAssistantId) return { ...m, id: data.assistantMessage.id, content: data.assistantMessage.content };
+          return m;
+        })
+      );
+      setConversations((prev) =>
+        prev
+          .map((c) =>
+            c.id === conversationId ? { ...c, title: data.title || c.title, updatedAt: new Date().toISOString() } : c
+          )
+          .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+      );
+    } catch (err) {
+      setErrorBanner(err.message);
+      setMessages((prev) => prev.filter((m) => m.id !== localUserId && m.id !== localAssistantId));
+    }
+  }
+
   async function sendMessage(text) {
-    const content = (text ?? input).trim();
-    if (!content || isStreaming) return;
+    const raw = (text ?? input).trim();
+    if (!raw || isStreaming) return;
+
+    const imageMatch = raw.match(/^\/image\s+(.+)/i);
+    if (imageMatch) {
+      sendImageRequest(imageMatch[1]);
+      return;
+    }
+
+    const content = raw;
 
     let conversationId = activeId;
     if (!conversationId) {
@@ -237,6 +291,7 @@ export default function App() {
                   key={m.id}
                   role={m.role}
                   content={m.content}
+                  contentType={m.contentType || "text"}
                   isStreaming={isStreaming && m.role === "assistant" && m.id === messages[messages.length - 1]?.id}
                 />
               ))}

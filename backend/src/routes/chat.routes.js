@@ -9,6 +9,49 @@ function truncateTitle(text) {
   return clean.length > 48 ? clean.slice(0, 48) + "…" : clean;
 }
 
+// POST /api/chat/image  { conversationId, prompt }
+// Generates an image via Pollinations.ai — a free, no-API-key image API.
+// We don't proxy the actual image bytes through our server: we just build
+// the URL (with a fixed seed so it's reproducible on reload) and store it;
+// the browser's <img> tag fetches the picture directly from Pollinations.
+router.post("/image", async (req, res) => {
+  const { conversationId, prompt } = req.body || {};
+  if (!conversationId || !prompt || !prompt.trim()) {
+    return res.status(400).json({ error: "conversationId and prompt are required" });
+  }
+
+  const db = readAll();
+  const convo = db.conversations.find((c) => c.id === conversationId && c.userId === req.userId);
+  if (!convo) return res.status(404).json({ error: "Conversation not found" });
+
+  const seed = Date.now();
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    prompt.trim()
+  )}?width=1024&height=1024&seed=${seed}`;
+
+  const userMessage = {
+    id: `m${Date.now()}`,
+    role: "user",
+    contentType: "text",
+    content: prompt.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  const assistantMessage = {
+    id: `m${Date.now() + 1}`,
+    role: "assistant",
+    contentType: "image",
+    content: imageUrl,
+    createdAt: new Date().toISOString(),
+  };
+
+  convo.messages.push(userMessage, assistantMessage);
+  if (convo.title === "New chat") convo.title = truncateTitle(prompt);
+  convo.updatedAt = new Date().toISOString();
+  writeAll(db);
+
+  res.json({ userMessage, assistantMessage, title: convo.title });
+});
+
 // POST /api/chat/stream  { conversationId, content }
 // Streams the assistant's reply back as it's generated, using Server-Sent
 // Events. Each chunk looks like: data: {"type":"delta","text":"..."}\n\n
@@ -22,7 +65,13 @@ router.post("/stream", async (req, res) => {
   const convo = db.conversations.find((c) => c.id === conversationId && c.userId === req.userId);
   if (!convo) return res.status(404).json({ error: "Conversation not found" });
 
-  const userMessage = { id: `m${Date.now()}`, role: "user", content, createdAt: new Date().toISOString() };
+  const userMessage = {
+    id: `m${Date.now()}`,
+    role: "user",
+    contentType: "text",
+    content,
+    createdAt: new Date().toISOString(),
+  };
   convo.messages.push(userMessage);
   if (convo.title === "New chat") convo.title = truncateTitle(content);
   convo.updatedAt = new Date().toISOString();
@@ -33,7 +82,9 @@ router.post("/stream", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
 
-  const apiMessages = convo.messages.map((m) => ({ role: m.role, content: m.content }));
+  const apiMessages = convo.messages
+    .filter((m) => (m.contentType || "text") === "text")
+    .map((m) => ({ role: m.role, content: m.content }));
   let assistantText = "";
 
   try {
@@ -49,6 +100,7 @@ router.post("/stream", async (req, res) => {
     const assistantMessage = {
       id: `m${Date.now() + 1}`,
       role: "assistant",
+      contentType: "text",
       content: assistantText,
       createdAt: new Date().toISOString(),
     };

@@ -63,6 +63,9 @@ export const api = {
     request(`/conversations/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
   deleteConversation: (id) => request(`/conversations/${id}`, { method: "DELETE" }),
 
+  generateImage: (conversationId, prompt) =>
+    request("/chat/image", { method: "POST", body: JSON.stringify({ conversationId, prompt }) }),
+
   /**
    * Streams a chat reply. Calls handlers.onDelta(text) as chunks arrive,
    * handlers.onDone({message, title}) once complete, or handlers.onError(message).

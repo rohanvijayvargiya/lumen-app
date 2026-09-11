@@ -28,7 +28,7 @@ export function ChatInput({ value, onChange, onSend, onStop, disabled, isStreami
           value={value}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder="Message Lumen…"
+          placeholder="Message Lumen… (try /image a description)"
           rows={1}
           className="flex-1 resize-none outline-none text-sm py-1.5 max-h-[180px] bg-transparent"
         />
