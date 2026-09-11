@@ -5,9 +5,10 @@ const SYSTEM_PROMPT =
   "Answer clearly and concisely. Use markdown (bold, code blocks, lists) when it " +
   "genuinely helps readability, but don't overuse it.";
 
-// Groq's free tier — swap this for another model ID from console.groq.com/docs/models
-// if you want a different one (e.g. a smaller/faster model, or a newer release).
-const MODEL = "llama-3.3-70b-versatile";
+// Groq's free tier — llama-3.3-70b-versatile was retired by Groq on
+// 2026-08-16; this is their recommended replacement. Swap this for another
+// model ID from console.groq.com/docs/models if you want a different one.
+const MODEL = "openai/gpt-oss-120b";
 
 /**
  * Calls Groq's OpenAI-compatible chat completions endpoint with streaming
