@@ -13,7 +13,7 @@ app.use(cors({ origin: CORS_ORIGIN.split(",").map((s) => s.trim()) }));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", aiConfigured: Boolean(process.env.ANTHROPIC_API_KEY) });
+  res.json({ status: "ok", aiConfigured: Boolean(process.env.GROQ_API_KEY) });
 });
 
 app.use("/api/conversations", conversationsRoutes);
@@ -26,7 +26,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Lumen API listening on http://localhost:${PORT}`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.log("WARNING: ANTHROPIC_API_KEY is not set — chatting will fail until it's added.");
+  if (!process.env.GROQ_API_KEY) {
+    console.log("WARNING: GROQ_API_KEY is not set — chatting will fail until it's added.");
   }
 });

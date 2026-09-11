@@ -1,6 +1,6 @@
 const express = require("express");
 const { readAll, writeAll } = require("../db");
-const { streamClaude } = require("../utils/anthropicStream");
+const { streamGroq } = require("../utils/groqStream");
 
 const router = express.Router();
 
@@ -37,15 +37,13 @@ router.post("/stream", async (req, res) => {
   let assistantText = "";
 
   try {
-    for await (const evt of streamClaude(apiMessages)) {
-      if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
-        assistantText += evt.delta.text;
-        res.write(`data: ${JSON.stringify({ type: "delta", text: evt.delta.text })}\n\n`);
-      } else if (evt.type === "error") {
-        throw new Error(evt.error?.message || "Streaming error from Anthropic API");
-      } else if (evt.type === "message_stop") {
-        break;
+    for await (const evt of streamGroq(apiMessages)) {
+      const delta = evt.choices?.[0]?.delta?.content;
+      if (delta) {
+        assistantText += delta;
+        res.write(`data: ${JSON.stringify({ type: "delta", text: delta })}\n\n`);
       }
+      if (evt.choices?.[0]?.finish_reason) break;
     }
 
     const assistantMessage = {

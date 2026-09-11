@@ -1,8 +1,11 @@
 # Lumen — AI Chat App (Full-Stack)
 
 A real full-stack AI chatbot: a Node/Express backend that streams responses
-from Claude token-by-token (like ChatGPT/Claude.ai), and a React (Vite)
-frontend with multiple saved conversations in a sidebar.
+token-by-token (like ChatGPT/Claude.ai), and a React (Vite) frontend with
+multiple saved conversations in a sidebar.
+
+Runs on **Groq's free API** (no credit card, generous free tier) serving
+open-source models like Llama 3.3 — so the whole thing costs $0 to run.
 
 ```
 lumen-chat/
@@ -26,9 +29,9 @@ lumen-chat/
 
 - Node.js 18 or later
 - npm
-- An Anthropic API key (**required** — unlike the ATS project, there's no
-  fallback mode; a chatbot has nothing to "fall back" to). Get one at
-  https://console.anthropic.com/settings/keys
+- A free Groq API key (**required** — there's no fallback mode; a chatbot
+  has nothing to "fall back" to). Get one at https://console.groq.com/keys
+  — sign up with email or Google, no credit card, no charges.
 
 ## 1. Backend setup
 
@@ -41,7 +44,7 @@ cp .env.example .env
 Open `backend/.env` and set:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=gsk_...
 ```
 
 Start it:
@@ -56,6 +59,8 @@ Runs at `http://localhost:4000`. Data is stored in `backend/data/db.json`
 ```bash
 curl http://localhost:4000/api/health
 ```
+
+You should see `{"status":"ok","aiConfigured":true}`.
 
 ## 2. Frontend setup
 
@@ -86,7 +91,7 @@ Open the URL Vite prints (typically `http://localhost:5173`).
 1. Push this folder to a GitHub repo.
 2. **Backend → Render**: New Web Service → connect the repo → Root Directory
    `backend` → Build Command `npm install` → Start Command `npm start` →
-   add environment variables `ANTHROPIC_API_KEY` and `CORS_ORIGIN` (set the
+   add environment variables `GROQ_API_KEY` and `CORS_ORIGIN` (set the
    latter to your Vercel URL once you have it).
 3. **Frontend → Vercel**: Add New Project → connect the repo → Root
    Directory `frontend` → add environment variable `VITE_API_URL` set to
@@ -104,10 +109,19 @@ Open the URL Vite prints (typically `http://localhost:5173`).
   production use — no other file needs to change.
 - **Auth**: there's no login system, so anyone with the URL can use (and see)
   all conversations. Add authentication before sharing this beyond yourself.
-- **Model**: the model name is set in `backend/src/utils/anthropicStream.js`
-  (`claude-sonnet-4-6`). Check Anthropic's docs for the latest available
-  model names if you want to change it.
+- **Model**: set in `backend/src/utils/groqStream.js` (`llama-3.3-70b-versatile`
+  by default). Check https://console.groq.com/docs/models for the full list
+  if you want to try a different one (faster/smaller, or a newer release).
+- **Free tier limits**: Groq's free tier allows 30 requests/minute and
+  14,400/day — more than enough for personal use, but if you ever hit a rate
+  limit error, that's why.
+- **Switching back to Claude later**: if you want Claude's actual model
+  quality instead of an open-source one, add credits to
+  console.anthropic.com and swap `groqStream.js` back to calling
+  `api.anthropic.com/v1/messages` (the original version used that; the
+  request/response shapes differ slightly, so it's a small rewrite, not a
+  one-line change).
 - **Stop button**: currently stops updating the UI locally but doesn't
-  cancel the underlying request to Anthropic — good enough for a first
-  version; a true cancel would use an `AbortController` passed through to
-  the backend's fetch call.
+  cancel the underlying request — good enough for a first version; a true
+  cancel would use an `AbortController` passed through to the backend's
+  fetch call.
