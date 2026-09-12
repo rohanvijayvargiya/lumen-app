@@ -18,30 +18,45 @@ function renderMathIfReady(el) {
 function ImageMessage({ src }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+    setFailed(false);
+    setTimedOut(false);
+    const timer = setTimeout(() => setTimedOut(true), 25000);
+    return () => clearTimeout(timer);
+  }, [src]);
+
+  const showError = failed || timedOut;
 
   return (
     <div className="max-w-[75%] rounded-2xl rounded-bl-sm overflow-hidden bg-panel">
-      {!loaded && !failed && (
+      {!loaded && !showError && (
         <div className="w-72 h-72 flex flex-col items-center justify-center gap-2 text-xs text-muted">
           <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           Generating image… can take up to 15s
         </div>
       )}
-      {failed && (
+      {showError && (
         <div className="w-72 h-72 flex flex-col items-center justify-center gap-2 text-xs text-muted p-4 text-center">
           <ImageOff size={20} />
-          Couldn't generate that image. Try rephrasing the prompt.
+          {timedOut && !failed
+            ? "This is taking too long — the image service may be busy. Try again in a bit."
+            : "Couldn't generate that image. Try rephrasing the prompt."}
         </div>
       )}
-      <img
-        src={src}
-        alt="AI generated"
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-        onError={() => setFailed(true)}
-        className="max-w-full block"
-        style={{ display: loaded ? "block" : "none" }}
-      />
+      {!showError && (
+        <img
+          src={src}
+          alt="AI generated"
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          className="max-w-full block"
+          style={{ display: loaded ? "block" : "none" }}
+        />
+      )}
     </div>
   );
 }

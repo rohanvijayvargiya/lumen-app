@@ -11,7 +11,7 @@ function publicUser(user) {
 }
 
 // POST /api/auth/signup  { email, password, name }
-router.post("/signup", (req, res) => {
+router.post("/signup", async (req, res) => {
   const { email, password, name } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required." });
@@ -21,7 +21,7 @@ router.post("/signup", (req, res) => {
   }
 
   const cleanEmail = String(email).trim().toLowerCase();
-  const db = readAll();
+  const db = await readAll();
 
   if (db.users.some((u) => u.email === cleanEmail)) {
     return res.status(409).json({ error: "An account with that email already exists." });
@@ -35,25 +35,23 @@ router.post("/signup", (req, res) => {
     createdAt: new Date().toISOString(),
   };
   db.users.push(user);
-  writeAll(db);
+  await writeAll(db);
 
   const token = signToken(user.id);
   res.status(201).json({ token, user: publicUser(user) });
 });
 
 // POST /api/auth/login  { email, password }
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required." });
   }
 
   const cleanEmail = String(email).trim().toLowerCase();
-  const db = readAll();
+  const db = await readAll();
   const user = db.users.find((u) => u.email === cleanEmail);
 
-  // Deliberately vague error for both cases — don't reveal whether the
-  // email exists, that just helps someone guessing accounts.
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
     return res.status(401).json({ error: "Incorrect email or password." });
   }
@@ -62,9 +60,9 @@ router.post("/login", (req, res) => {
   res.json({ token, user: publicUser(user) });
 });
 
-// GET /api/auth/me — used on page load to restore a session from a saved token
-router.get("/me", requireAuth, (req, res) => {
-  const { users } = readAll();
+// GET /api/auth/me
+router.get("/me", requireAuth, async (req, res) => {
+  const { users } = await readAll();
   const user = users.find((u) => u.id === req.userId);
   if (!user) return res.status(401).json({ error: "Account no longer exists." });
   res.json(publicUser(user));

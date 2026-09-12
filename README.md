@@ -18,6 +18,11 @@ lumen-chat/
 
 - **Accounts** — sign up, log in; passwords are hashed (never stored in
   plain text); sessions use signed tokens (JWT) that last 30 days.
+- **Real persistence** — data lives in a free hosted Redis database
+  (Upstash), not a local file, so accounts and chats survive server
+  restarts (important on free hosting tiers like Render, which restart
+  the container — and would otherwise wipe a local file — after periods
+  of inactivity).
 - **Private history** — every conversation belongs to exactly one account;
   the API refuses to show or modify a conversation that isn't yours.
 - **Streaming responses** — replies appear word-by-word as they're generated.
@@ -52,8 +57,20 @@ Generate a good `JWT_SECRET` with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
-(You can technically skip this — the app auto-generates one — but then
-everyone gets logged out every time the server restarts.)
+
+**Set up free persistent storage (important for deployment):**
+
+1. Go to https://console.upstash.com and sign up (free, no card).
+2. Click **"Create Database"**, give it any name, pick a region close to
+   you, click Create.
+3. On the database's page, find the **"REST API"** section — copy the
+   `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` values shown
+   there directly into your `.env` file.
+
+Without this, the app still runs locally using a local file — but once
+deployed to Render's free tier, that file gets wiped every time the
+server restarts, and everyone's accounts disappear. Upstash fixes that
+permanently, for free.
 
 Start it:
 
