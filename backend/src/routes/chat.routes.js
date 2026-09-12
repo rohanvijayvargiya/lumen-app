@@ -30,7 +30,7 @@ router.post(
     const seed = Date.now();
     const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
       prompt.trim()
-    )}?width=1024&height=1024&seed=${seed}`;
+    )}?width=512&height=512&seed=${seed}&nologo=true`;
 
     const userMessage = {
       id: `m${Date.now()}`,

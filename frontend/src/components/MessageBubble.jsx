@@ -24,7 +24,7 @@ function ImageMessage({ src }) {
     setLoaded(false);
     setFailed(false);
     setTimedOut(false);
-    const timer = setTimeout(() => setTimedOut(true), 25000);
+    const timer = setTimeout(() => setTimedOut(true), 40000);
     return () => clearTimeout(timer);
   }, [src]);
 
@@ -35,7 +35,7 @@ function ImageMessage({ src }) {
       {!loaded && !showError && (
         <div className="w-72 h-72 flex flex-col items-center justify-center gap-2 text-xs text-muted">
           <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          Generating image… can take up to 15s
+          Generating image… can take up to 30s
         </div>
       )}
       {showError && (
