@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { renderMarkdown } from "../lib/markdown";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
+function toProxiedSrc(pollinationsUrl) {
+  return `${API_BASE}/image-proxy?url=${encodeURIComponent(pollinationsUrl)}`;
+}
+
 function renderMathIfReady(el) {
   if (!el || typeof window === "undefined" || !window.renderMathInElement) return false;
   window.renderMathInElement(el, {
@@ -48,7 +54,7 @@ function ImageMessage({ src }) {
       )}
       {!showError && (
         <img
-          src={src}
+          src={toProxiedSrc(src)}
           alt="AI generated"
           loading="lazy"
           onLoad={() => setLoaded(true)}

@@ -6,6 +6,7 @@ const { requireAuth } = require("./middleware/auth");
 const authRoutes = require("./routes/auth.routes");
 const conversationsRoutes = require("./routes/conversations.routes");
 const chatRoutes = require("./routes/chat.routes");
+const imageProxyRoutes = require("./routes/imageProxy.routes");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -18,8 +19,10 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", aiConfigured: Boolean(process.env.GROQ_API_KEY) });
 });
 
-// Signup/login are public. Everything else requires a valid session.
+// Signup/login and the image proxy are public. Everything else requires a
+// valid session.
 app.use("/api/auth", authRoutes);
+app.use("/api/image-proxy", imageProxyRoutes);
 app.use("/api/conversations", requireAuth, conversationsRoutes);
 app.use("/api/chat", requireAuth, chatRoutes);
 
