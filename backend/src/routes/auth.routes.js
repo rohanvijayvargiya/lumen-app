@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const { readAll, writeAll } = require("../db");
 const { signToken } = require("../utils/jwt");
 const { requireAuth } = require("../middleware/auth");
+const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
 
@@ -11,61 +12,71 @@ function publicUser(user) {
 }
 
 // POST /api/auth/signup  { email, password, name }
-router.post("/signup", async (req, res) => {
-  const { email, password, name } = req.body || {};
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required." });
-  }
-  if (password.length < 6) {
-    return res.status(400).json({ error: "Password must be at least 6 characters." });
-  }
+router.post(
+  "/signup",
+  asyncHandler(async (req, res) => {
+    const { email, password, name } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
 
-  const cleanEmail = String(email).trim().toLowerCase();
-  const db = await readAll();
+    const cleanEmail = String(email).trim().toLowerCase();
+    const db = await readAll();
 
-  if (db.users.some((u) => u.email === cleanEmail)) {
-    return res.status(409).json({ error: "An account with that email already exists." });
-  }
+    if (db.users.some((u) => u.email === cleanEmail)) {
+      return res.status(409).json({ error: "An account with that email already exists." });
+    }
 
-  const user = {
-    id: `u${Date.now()}`,
-    email: cleanEmail,
-    name: (name && name.trim()) || cleanEmail.split("@")[0],
-    passwordHash: bcrypt.hashSync(password, 10),
-    createdAt: new Date().toISOString(),
-  };
-  db.users.push(user);
-  await writeAll(db);
+    const user = {
+      id: `u${Date.now()}`,
+      email: cleanEmail,
+      name: (name && name.trim()) || cleanEmail.split("@")[0],
+      passwordHash: bcrypt.hashSync(password, 10),
+      createdAt: new Date().toISOString(),
+    };
+    db.users.push(user);
+    await writeAll(db);
 
-  const token = signToken(user.id);
-  res.status(201).json({ token, user: publicUser(user) });
-});
+    const token = signToken(user.id);
+    res.status(201).json({ token, user: publicUser(user) });
+  })
+);
 
 // POST /api/auth/login  { email, password }
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required." });
-  }
+router.post(
+  "/login",
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
 
-  const cleanEmail = String(email).trim().toLowerCase();
-  const db = await readAll();
-  const user = db.users.find((u) => u.email === cleanEmail);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const db = await readAll();
+    const user = db.users.find((u) => u.email === cleanEmail);
 
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
-    return res.status(401).json({ error: "Incorrect email or password." });
-  }
+    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+      return res.status(401).json({ error: "Incorrect email or password." });
+    }
 
-  const token = signToken(user.id);
-  res.json({ token, user: publicUser(user) });
-});
+    const token = signToken(user.id);
+    res.json({ token, user: publicUser(user) });
+  })
+);
 
 // GET /api/auth/me
-router.get("/me", requireAuth, async (req, res) => {
-  const { users } = await readAll();
-  const user = users.find((u) => u.id === req.userId);
-  if (!user) return res.status(401).json({ error: "Account no longer exists." });
-  res.json(publicUser(user));
-});
+router.get(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { users } = await readAll();
+    const user = users.find((u) => u.id === req.userId);
+    if (!user) return res.status(401).json({ error: "Account no longer exists." });
+    res.json(publicUser(user));
+  })
+);
 
 module.exports = router;

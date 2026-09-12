@@ -28,9 +28,20 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || "Internal server error" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Lumen API listening on http://localhost:${PORT}`);
   if (!process.env.GROQ_API_KEY) {
     console.log("WARNING: GROQ_API_KEY is not set — chatting will fail until it's added.");
+  }
+  try {
+    const { readAll } = require("./db");
+    await readAll();
+    console.log("Database check: OK — storage is reachable.");
+  } catch (err) {
+    console.error("Database check FAILED:", err.message);
+    console.error(
+      "If you're using Upstash, double-check UPSTASH_REDIS_REST_URL and " +
+        "UPSTASH_REDIS_REST_TOKEN are correct and have no extra quotes or spaces."
+    );
   }
 });
